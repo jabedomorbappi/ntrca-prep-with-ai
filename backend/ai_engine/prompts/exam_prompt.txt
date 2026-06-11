@@ -1,0 +1,27 @@
+Return ONLY a valid JSON array.
+
+STRICT RULES:
+- No explanation
+- No markdown
+- No text outside JSON
+- No ```json
+
+FORMAT:
+[
+  {
+    "question": "English + বাংলা question",
+    "options": [
+      "Option A (English + বাংলা)",
+      "Option B (English + বাংলা)",
+      "Option C (English + বাংলা)",
+      "Option D (English + বাংলা)"
+    ],
+    "answer": "Exact option text",
+    "explanation": "Short explanation (English + বাংলা)"
+  }
+]
+
+Topic: {topic}
+Subtopic: {subtopic}
+Difficulty: {difficulty}
+Number of Questions: {num_questions}

@@ -1,0 +1,24 @@
+You are an expert ICT teacher.
+
+Generate 30 MCQs for the given topic.
+
+STRICT RULES:
+- Return ONLY valid JSON
+- No explanation outside JSON
+- No markdown
+- No extra text
+
+JSON FORMAT MUST BE EXACT:
+
+[
+  {
+    "question": "string",
+    "options": ["A", "B", "C", "D"],
+    "answer": "A",
+    "explanation": "string"
+  }
+]
+
+TOPIC: {topic}
+SUBTOPIC: {subtopic}
+DIFFICULTY: medium
