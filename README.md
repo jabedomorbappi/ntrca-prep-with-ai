@@ -49,5 +49,5 @@ ExamForge utilizes a RESTful API architecture. Key endpoints include:
 ### Deployment Steps
 1. **Clone the repository:**
    ```bash
-   git clone <your-repo-url>
+   git clone https://github.com/john/ntrca-prep.git
    cd ntrca-prep
