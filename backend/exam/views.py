@@ -22,34 +22,31 @@ def create_exam(request):
 
     # 🎯 IF SNAPSHOT_ID IS PROVIDED, DIRECTLY RESUME IT
     if snapshot_id:
-        try:
-            snapshot = ExamSnapshot.objects.get(id=snapshot_id)
-            return Response({
-                "snapshot_id": snapshot.id,
-                "questions": snapshot.questions_json,
-                "is_existing": True
-            })
-        except ExamSnapshot.DoesNotExist:
+        snapshot = ExamSnapshot.objects.filter(id=snapshot_id).first()
+        if not snapshot:
             return Response({"error": "Session not found"}, status=404)
-        
+        return Response({
+            "snapshot_id": snapshot.id,
+            "questions": snapshot.questions_json,
+            "is_existing": True
+        })
 
     topic_id = request.data.get("topic_id")
     subtopic_id = request.data.get("subtopic_id")
     num_questions = int(request.data.get("num_questions", 10))
     difficulty = request.data.get("difficulty", "medium")
-    # use_question_bank = request.data.get("use_question_bank", True)  # 👈 Catch user's selected mode
-    timer_minutes = int(request.data.get("timer_minutes", 20)) # Get timer
-    negative_marking = request.data.get("negative_marking", False)
+    timer_minutes = int(request.data.get("timer_minutes", 20))
     use_question_bank = request.data.get("use_question_bank", True)
 
-    try:
-        topic = Topic.objects.get(id=topic_id)
-        subtopic = SubTopic.objects.get(id=subtopic_id) if subtopic_id else None
-    except (Topic.DoesNotExist, SubTopic.DoesNotExist):
-        return Response({"error": "Topic or SubTopic not found in database."}, status=404)
+    # Use filter().first() to avoid DoesNotExist/MultipleObjectsReturned crashes
+    topic = Topic.objects.filter(id=topic_id).first()
+    subtopic = SubTopic.objects.filter(id=subtopic_id).first() if subtopic_id else None
+
+    if not topic:
+        return Response({"error": "Topic not found."}, status=404)
 
     # =====================================================================
-    # 🔥 STEP 1: CHECK SNAPSHOT (ONLY FOR STORED QUESTION BANK USES)
+    # 🔥 STEP 1: CHECK SNAPSHOT
     # =====================================================================
     if use_question_bank:
         snapshot = ExamSnapshot.objects.filter(
@@ -85,18 +82,16 @@ def create_exam(request):
         subtopic,
         num_questions,
         difficulty,
-        timer_minutes=request.data.get("timer_minutes", 20), # <--- GET FROM FRONTEND
+        timer_minutes=timer_minutes,
         use_question_bank=use_question_bank
     )
 
     if result.get("status") == "error":
-        # Return a clean 400 Bad Request to let the frontend show the error gracefully
         return Response(
             {"error": result.get("message"), "code": result.get("code")}, 
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    # Save a clean snapshot tracker if using database question bank mode
     if use_question_bank:
         ExamSnapshot.objects.create(
             topic=topic,
@@ -111,53 +106,66 @@ def create_exam(request):
         "exam_id": result.get("exam_id"),
         "is_existing": False
     })
-
 @api_view(["POST"])
 def start_exam(request):
     snapshot_id = request.data.get("snapshot_id")
     exam_id = request.data.get("exam_id")
 
     try:
+        def get_calculated_duration(num_questions):
+            # 60% rule: 0.6 mins per question, min 1 min
+            return max(int(num_questions * 0.6), 1)
+
+        exam = None
+
         if snapshot_id:
-            # 1. Fetch the snapshot
-            snapshot = ExamSnapshot.objects.get(id=snapshot_id)
+            snapshot = ExamSnapshot.objects.filter(id=snapshot_id).first()
+            if not snapshot:
+                return Response({"error": "Snapshot not found"}, status=404)
             
-            # 2. Try to get or create a "Shell" Exam template for this topic if one is missing
-            exam, _ = Exam.objects.get_or_create(
-                topic=snapshot.topic,
-                subtopic=snapshot.subtopic,
-                defaults={
-                    "title": f"Exam: {snapshot.topic.name}",
-                    "difficulty": snapshot.difficulty,
-                    "num_questions": snapshot.num_questions,
-                    "duration_minutes": 20 # Default fallback
-                }
-            )
+            exam = Exam.objects.filter(
+                topic=snapshot.topic, 
+                subtopic=snapshot.subtopic,num_questions=snapshot.num_questions).first()
             
-            # 3. Create or get the attempt
-            attempt, created = ExamAttempt.objects.get_or_create(
-                exam=exam,
-                is_completed=False,
-                defaults={"started_at": timezone.now()}
-            )
+            if not exam:
+                duration = get_calculated_duration(snapshot.num_questions)
+                exam = Exam.objects.create(
+                    topic=snapshot.topic,
+                    subtopic=snapshot.subtopic,
+                    title=f"Exam: {snapshot.topic.name}",
+                    difficulty=snapshot.difficulty,
+                    num_questions=snapshot.num_questions,
+                    duration_minutes=duration
+                )
             
         elif exam_id:
-            exam = Exam.objects.get(id=exam_id)
-            attempt = ExamAttempt.objects.create(exam=exam, started_at=timezone.now())
+            exam = Exam.objects.filter(id=exam_id).first()
+            if not exam:
+                return Response({"error": "Exam not found"}, status=404)
+            
+            # Apply 60% rule if duration is uninitialized
+            if exam.duration_minutes == 0 or exam.duration_minutes is None:
+                exam.duration_minutes = get_calculated_duration(exam.num_questions)
+                exam.save()
         else:
             return Response({"error": "No ID provided"}, status=400)
 
+        # Fetch or create the active attempt
+        attempt = ExamAttempt.objects.filter(exam=exam, is_completed=False).first()
+        if not attempt:
+            attempt = ExamAttempt.objects.create(exam=exam, started_at=timezone.now())
+
+        # Return response matching frontend expectations
         return Response({
             "status": "started",
             "attempt_id": attempt.id,
-            "exam_id": attempt.exam.id,
-            "duration_minutes": attempt.exam.duration_minutes
+            "exam_id": exam.id, # Fixed: was exam.exam.id
+            "duration_minutes": exam.duration_minutes
         })
 
     except Exception as e:
-        print(f"DEBUG: START FAILED: {str(e)}")
+        print(f"DEBUG: Start Exam Error: {str(e)}")
         return Response({"error": str(e)}, status=500)
-
 @api_view(["POST"])
 def save_answer(request):
     try:
@@ -384,3 +392,87 @@ def get_active_snapshot(request, subtopic_id):
         "difficulty": active_snapshot.difficulty,
         "created_at": active_snapshot.created_at
     })
+
+
+import json
+from django.contrib.auth import get_user_model
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode
+from django.utils.encoding import force_bytes
+from django.core.mail import send_mail
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+
+User = get_user_model()
+
+@csrf_exempt
+def request_password_reset(request):
+    if request.method != 'POST':
+        return JsonResponse({"error": "Invalid request method. Use POST."}, status=405)
+
+    try:
+        # Debugging: Print raw request body to your terminal
+        print("DEBUG: Received request body:", request.body.decode('utf-8'))
+        
+        data = json.loads(request.body)
+        email = data.get('email')
+        
+        if not email:
+            return JsonResponse({"error": "Email field is required"}, status=400)
+            
+        user = User.objects.filter(email=email).first()
+        
+        if user:
+            token = default_token_generator.make_token(user)
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            
+            # The reset link for your React frontend
+            reset_link = f"http://localhost:5173/reset-password/{uid}/{token}"
+            
+            send_mail(
+    subject='Password Reset Request',
+    message=f'Click here to reset your password: {reset_link}',
+    from_email=None,  # This tells Django to use the DEFAULT_FROM_EMAIL in settings.py
+    recipient_list=[email],
+    fail_silently=False,
+)
+            return JsonResponse({"message": "Reset link sent to your email!"})
+        
+        return JsonResponse({"error": "Email not found"}, status=404)
+        
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON format"}, status=400)
+    except Exception as e:
+        print("DEBUG: Exception:", str(e))
+        return JsonResponse({"error": str(e)}, status=500)
+
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_decode
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
+
+@csrf_exempt
+def reset_password_confirm(request, uidb64, token):
+    if request.method != 'POST':
+        return JsonResponse({"error": "Use POST"}, status=405)
+    
+    try:
+        # 1. Decode the UID
+        uid = urlsafe_base64_decode(uidb64).decode()
+        user = User.objects.get(pk=uid)
+        
+        # 2. Verify the Token
+        if default_token_generator.check_token(user, token):
+            data = json.loads(request.body)
+            new_password = data.get('password')
+            
+            # 3. Update Password
+            user.set_password(new_password)
+            user.save()
+            return JsonResponse({"message": "Password updated successfully!"})
+        
+        return JsonResponse({"error": "Invalid or expired token"}, status=400)
+    
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)        

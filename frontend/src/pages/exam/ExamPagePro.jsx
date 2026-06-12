@@ -1,23 +1,23 @@
-import { useEffect, useCallback } from "react";
-import useTimer from "../hooks/useTimer";
-import { useExam } from "../context/ExamContext";
+// import { useEffect, useCallback } from "react";
+import React, { useCallback, useState, useEffect, useRef } from 'react';
+import useTimer from "../../hooks/useTimer";
+import { useExam } from "../../context/ExamContext";
 import { useNavigate, useParams } from "react-router-dom";
-import api from "../api"; 
+import api from "../../api"; // Make sure the path is correct (../api.js)
 
 export default function ExamPagePro() {
-  const {
-  exam, setExam,
-  answers, setAnswers,
-  marked, setMarked,
-  time, setTime // ✅ This will now work perfectly!
-} = useExam();
-
+  console.log("COMPONENT MOUNTED");
+  
+  const { exam, setExam, answers, setAnswers, marked, setMarked, time, setTime } = useExam();
   const navigate = useNavigate();
   const { examId } = useParams();
+  const hasStarted = useRef(false);
 
-  // -----------------------------
-  // SUBMIT EXAM
-  // -----------------------------
+
+
+
+
+  // 1. SUBMIT EXAM
   const submitExam = useCallback(async () => {
     const attemptId = localStorage.getItem("attempt_id");
     if (!attemptId) return;
@@ -28,7 +28,6 @@ export default function ExamPagePro() {
         exam_id: parseInt(examId),
         answers: answers 
       });
-
       localStorage.removeItem("attempt_id");
       navigate(`/result/${attemptId}`);
     } catch (err) {
@@ -36,50 +35,61 @@ export default function ExamPagePro() {
     }
   }, [answers, examId, navigate]);
 
-  // -----------------------------
-  // LOAD EXAM & SYNC TIMER
-  // -----------------------------
+
+
+
+
+  // 2. LOAD EXAM & SYNC TIMER (The Engine)
   useEffect(() => {
-    const startExam = async () => {
-      try {
-        console.log("DEBUG: Resuming/Starting session with ID:", examId);
+    if (hasStarted.current) return;
+    if (!examId) return;
+
+    hasStarted.current = true;
+    let isCancelled = false;
+
+   const startExam = async () => {
+    try {
+        // 1. Create the attempt
+        const startRes = await api.post("/api/exam/start/", { exam_id: examId });
+        localStorage.setItem("attempt_id", startRes.data.attempt_id);
         
-        const res = await api.post("/api/exam/start/", { snapshot_id: examId });
-        localStorage.setItem("attempt_id", res.data.attempt_id);
-
-        if (res.data.questions) {
-            setExam({ questions: res.data.questions, title: res.data.title || "Exam" });
-        } else {
-            const actualExamId = res.data.exam_id || examId;
-            const examRes = await api.get(`/api/exam/detail/${actualExamId}/`);
-            setExam(examRes.data);
-        }
-
-       // 3. Sync time safely
-const duration = res.data.duration_minutes || 6; // Default to 6 minutes if backend doesn't send it
-if (typeof setTime === 'function') {
-    setTime(duration * 60);
-} else {
-    console.warn("setTime is not a function, check ExamContext.js");
-}
+        // 2. Fetch the actual exam details to populate the UI
+        console.log("Fetching exam details for ID:", examId);
+        const examRes = await api.get(`/api/exam/detail/${examId}/`);
         
-      } catch (err) {
-        console.error("START ERROR:", err.response?.data || err.message);
-      }
-    };
+        // 3. Set state to finish loading
+        console.log("Exam data loaded:", examRes.data);
+        setExam(examRes.data); 
+    } catch (err) {
+        console.error("Error during startup:", err);
+    }
+};
 
-    if (examId) startExam();
-  }, [examId, setExam, setTime]);
+    startExam();
+    return () => { isCancelled = true; };
+  }, [examId, setExam]);
+
+
+
+
 
   // -----------------------------
-  // TIMER HOOK
-  // -----------------------------
-  const safeSetTime = typeof setTime === "function" ? setTime : () => {};
-  useTimer(time, safeSetTime, submitExam);
+// 3. TIMER HOOK
+  // Calculate based on API data
+  const finalMinutes = exam?.duration_minutes || (exam?.questions?.length * 0.6) || 30;
+  const durationInSeconds = finalMinutes * 60;
 
-  // -----------------------------
-  // UI HANDLERS
-  // -----------------------------
+  // Pass it to the hook
+  useTimer(durationInSeconds, setTime, submitExam);
+
+
+
+
+  // 3. TIMER HOOK
+  // const safeSetTime = typeof setTime === "function" ? setTime : () => {};
+  // useTimer(time, safeSetTime, submitExam);
+
+  // 4. UI HANDLERS
   const selectAnswer = (qId, optionId) => {
     setAnswers(prev => ({ ...prev, [qId]: optionId }));
   };
@@ -88,15 +98,17 @@ if (typeof setTime === 'function') {
     setMarked(prev => ({ ...prev, [qId]: !prev[qId] }));
   };
 
-  // -----------------------------
-  // LOADING GUARD
-  // -----------------------------
-  if (!exam?.questions?.length) {
+  // 5. LOADING GUARD
+  // 5. LOADING GUARD
+  console.log("GUARD CHECK. exam is:", exam); // See what is actually in 'exam'
+  
+  if (!exam || !exam.questions || exam.questions.length === 0) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ height: '100vh', background: '#f8fafc' }}>
         <div className="text-center">
           <div className="spinner-border text-primary mb-3" role="status"></div>
           <h4 className="text-secondary">Loading Exam Workspace...</h4>
+          <p>Debug: {exam ? "Exam loaded but no questions" : "Exam not loaded"}</p>
         </div>
       </div>
     );

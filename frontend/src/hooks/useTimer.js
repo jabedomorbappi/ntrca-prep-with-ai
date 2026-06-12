@@ -1,36 +1,29 @@
-// frontend/src/hooks/useTimer.js
+import { useEffect, useRef } from "react";
 
-import { useEffect } from "react";
-
-export default function useTimer(time, setTime, callback) {
+export default function useTimer(initialDuration, setTime, callback) {
+  const intervalRef = useRef(null);
 
   useEffect(() => {
+    // Only start if we have a valid positive duration
+    if (initialDuration <= 0) return;
 
-    // safety check
-    if (typeof setTime !== "function") {
-      console.error("❌ setTime is not a function");
-      return;
-    }
+    // Set the initial time provided by the API
+    setTime(initialDuration);
 
-    if (time <= 0) {
-      callback?.();
-      return;
-    }
-
-    const interval = setInterval(() => {
-
-      setTime(prev => {
+    intervalRef.current = setInterval(() => {
+      setTime((prev) => {
         if (prev <= 1) {
-          clearInterval(interval);
+          clearInterval(intervalRef.current);
           callback?.();
           return 0;
         }
         return prev - 1;
       });
-
     }, 1000);
 
-    return () => clearInterval(interval);
-
-  }, [time]);
+    // Cleanup on unmount
+    return () => clearInterval(intervalRef.current);
+  }, [initialDuration]); // Only re-run if the API-provided duration changes!
+  
+  // Note: We removed 'time' from the dependency array so it doesn't loop
 }

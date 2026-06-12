@@ -3,31 +3,22 @@ import ProtectedRoute from "./ProtectedRoute";
 import Navbar from "../components/Navbar";
 
 // Authentication Pages
-import Login from "../pages/Login";
-import Register from "../pages/Register";
+import Login from "../pages/auth/Login";
+import Register from "../pages/auth/Register";
+import RequestReset from "../pages/auth/RequestReset"; // Added
+import ResetConfirm from "../pages/auth/ResetConfirm"; // Added
 
 // Operational Pages
-import Home from "../pages/Home";
-import SubTopics from "../pages/SubTopics";
-import ExamSettings from "../pages/ExamSettings";
-import ExamPagePro from "../pages/ExamPagePro";
-import ResultPage from "../pages/ResultPage";
-import ExamHistoryPage from "../pages/ExamHistoryPage";
-import TopicsPage from "../pages/TopicsPage";
-import StudyPage from "../pages/StudyPage";
-import ProfilePage from "../pages/ProfilePage"; 
-
-// Global Application Layout Wrapper (Renders the dynamic Navbar cleanly for all views)
-function AppLayout() {
-  return (
-    <>
-      <Navbar />
-      <div className="container px-3 px-sm-4 py-4">
-        <Outlet />
-      </div>
-    </>
-  );
-}
+import Home from "../pages/study/Home";
+import SubTopics from "../pages/study/SubTopics";
+import ExamSettings from "../pages/exam/ExamSettings";
+import ExamPagePro from "../pages/exam/ExamPagePro";
+import ResultPage from "../pages/exam/ResultPage"; // Updated path
+import ExamHistoryPage from "../pages/exam/ExamHistoryPage";
+import TopicsPage from "../pages/study/TopicsPage";
+import StudyPage from "../pages/study/StudyPage";
+import ProfilePage from "../pages/user/ProfilePage"; 
+import AppLayout from "../layouts/AppLayout";
 
 export default function AppRoutes() {
   return (
@@ -35,9 +26,12 @@ export default function AppRoutes() {
       {/* 🔓 Public Authentication Portal Routes */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<RequestReset />} />
+      <Route path="/reset-password/:uidb64/:token" element={<ResetConfirm />} />
+
+    <Route element={<AppLayout />}></Route>
 
       {/* 🌐 MIXED / PUBLIC ACCESS BLOCK */}
-      {/* These pages show the Navbar and are visible to EVERYONE, even without logging in */}
       <Route element={<AppLayout />}>
         <Route path="/" element={<Home />} />
         <Route path="/topics/:subjectId" element={<TopicsPage />} />
@@ -45,7 +39,6 @@ export default function AppRoutes() {
         <Route path="/study/:subtopicId" element={<StudyPage />} />
         
         {/* 🔒 PROTECTED INDIVIDUAL DATA BLOCK */}
-        {/* These specific paths are nested inside your ProtectedRoute validation filter */}
         <Route element={<ProtectedRoute />}>
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/history" element={<ExamHistoryPage />} />
@@ -56,7 +49,7 @@ export default function AppRoutes() {
         </Route>
       </Route>
 
-      {/* 🚨 Catch-all unhandled fallback routing path */}
+      {/* 🚨 Catch-all */}
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );

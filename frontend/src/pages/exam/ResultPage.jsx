@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 // Change this line:
-import api from "../api"; // Assuming your api.js is in the 'src' folder
+import api from "../../api"; // Assuming your api.js is in the 'src' folder
 
 export default function ResultPage() {
   const { attemptId } = useParams();

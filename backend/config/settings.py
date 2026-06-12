@@ -138,9 +138,28 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-# স্ট্যাটিক ফাইলের জন্য
+
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+
+# settings.py
+
+# --- EMAIL CONFIGURATION ---
+# settings.py
+
+# Tells Django to output emails to the terminal instead of sending them over the internet
+# settings.py
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'jabedomorbappieee@gmail.com'
+# Use your 16-character App Password here, not your account password
+EMAIL_HOST_PASSWORD = 'your-16-character-app-password' 
+DEFAULT_FROM_EMAIL = 'jabedomorbappieee@gmail.com'

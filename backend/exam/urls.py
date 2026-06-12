@@ -9,46 +9,26 @@ from .views import (
     exam_review,
     exam_analytics,
     subtopic_exam_status,
-    get_exam_result,get_active_snapshot
+    get_exam_result,get_active_snapshot,request_password_reset
 )
 from .views import exam_snapshots
 from . import views
 
 urlpatterns = [
-    # =========================
-    # EXAM GENERATION
-    # =========================
     path("generate/", create_exam, name="create_exam"),
-
-    # =========================
-    # EXAM LIFECYCLE
-    # =========================
-    path("start/", start_exam, name="start_exam"),
+    path("start/", start_exam, name="start_exam"), # Ensure this is unique
     path("save-answer/", save_answer, name="save_answer"),
     path("submit-attempt/", submit_attempt),
-
-    # =========================
-    # EXAM DATA
-    # =========================
     path("detail/<int:exam_id>/", exam_detail, name="exam_detail"),
-
-    # =========================
-    # ANALYTICS / HISTORY
-    # =========================
     path("history/", exam_history, name="exam_history"),
     path("stats/<int:attempt_id>/", exam_analytics, name="exam_stats"),
-    path("subtopic-stats/<int:subtopic_id>/", subtopic_exam_status, name="subtopic_stats"), # ADD THIS
-    # =========================
-    # REVIEW SYSTEM (BCS STYLE)
-    # =========================
+    path("subtopic-stats/<int:subtopic_id>/", subtopic_exam_status, name="subtopic_stats"),
     path("review/<int:attempt_id>/", exam_review, name="exam_review"),
- 
-
-    path("snapshots/<int:subtopic_id>/",exam_snapshots,name="exam_snapshots"),
-    # Add this line
-    # To this:
-path("subtopic-stats/<int:subtopic_id>/", views.subtopic_exam_status, name="subtopic_stats"),
+    path("snapshots/<int:subtopic_id>/", exam_snapshots, name="exam_snapshots"),
     path("result/<int:attempt_id>/", get_exam_result),
-    path('active-snapshot/<int:subtopic_id>/', views.get_active_snapshot, name='active-snapshot'),
+    path('active-snapshot/<int:subtopic_id>/', get_active_snapshot, name='active-snapshot'),
+    path('password-reset/', views.request_password_reset, name='request_password_reset'),
+    path('password-reset-confirm/<str:uidb64>/<str:token>/', views.reset_password_confirm, name='reset_password_confirm'),
+
 
 ]

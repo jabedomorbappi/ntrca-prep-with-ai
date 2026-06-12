@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  # 1. The Backend (Django)
+  backend:
+    build: ./backend
+    container_name: ntrca-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    environment:
+      - DEBUG=1
+    command: python manage.py runserver 0.0.0.0:8000
+
+  # 2. The Frontend (React/Vite)
+  frontend:
+    build: ./frontend
+    container_name: ntrca-frontend
+    ports:
+      - "3000:80"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules # Important: Keeps container's node_modules separate
+    depends_on:
+      - backend

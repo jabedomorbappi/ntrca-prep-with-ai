@@ -1,6 +1,6 @@
 import { useState } from "react";
-import axios from "axios";
 import { useNavigate, Link } from "react-router-dom";
+import api from "../../api"; // Ensure this path correctly points to your api.js
 
 export default function Register() {
   const [formData, setFormData] = useState({ username: "", email: "", password: "" });
@@ -11,14 +11,13 @@ export default function Register() {
     e.preventDefault();
     setLoading(true);
     try {
-      await axios.post("http://127.0.0.1:8000/api/accounts/register/", formData);
+      // Use the api instance (which skips auth headers for this route)
+      await api.post("/api/accounts/register/", formData);
       navigate("/login");
-    }  catch (err) {
-  // This will alert the actual error details sent back by Django
-  const errorDetails = err.response?.data ? JSON.stringify(err.response.data) : err.message;
-  alert("Registration Failed: " + errorDetails);
-  console.log(err.response?.data);
-} finally {
+    } catch (err) {
+      console.table(err.response?.data);
+      alert("Registration Failed: " + JSON.stringify(err.response?.data));
+    } finally {
       setLoading(false);
     }
   };
