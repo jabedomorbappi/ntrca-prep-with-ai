@@ -13,11 +13,15 @@ load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-&)4xrk^s$u#o&p0$vopli#0do51jj-3_p!s94erfkep88&usib")
 DEBUG = os.environ.get("DEBUG", "False").lower() == "true"
+# Update ALLOWED_HOSTS
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+# If the environment variable isn't set, add your Render domain
+ALLOWED_HOSTS.append("ntrca-prep-with-ai.onrender.com")
 
+# Update CORS
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
-    "http://127.0.0.1:5173", # Add both localhost and 127.0.0.1 variants
+    "https://ntrca-prep-with-ai.onrender.com", # Add your live frontend URL here
 ]
 
 # Application definition
@@ -168,5 +172,6 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'jabedomorbappieee@gmail.com'
 # Use your 16-character App Password here, not your account password
-EMAIL_HOST_PASSWORD = 'your-16-character-app-password' 
+# In settings.py
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = 'jabedomorbappieee@gmail.com'
