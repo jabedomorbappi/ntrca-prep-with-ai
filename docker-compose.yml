@@ -1,26 +1,29 @@
 version: '3.8'
 
 services:
-  # 1. The Backend (Django)
+  db:
+    image: postgres:15
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=ntrca_db
+      - POSTGRES_USER=myuser
+      - POSTGRES_PASSWORD=mypassword
+
   backend:
     build: ./backend
-    container_name: ntrca-backend
-    ports:
-      - "8000:8000"
+    command: python manage.py migrate && python manage.py runserver 0.0.0.0:8000
     volumes:
       - ./backend:/app
-    environment:
-      - DEBUG=1
-    command: python manage.py runserver 0.0.0.0:8000
-
-  # 2. The Frontend (React/Vite)
-  frontend:
-    build: ./frontend
-    container_name: ntrca-frontend
     ports:
-      - "3000:80"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules # Important: Keeps container's node_modules separate
+      - "8000:8000"
+    environment:
+      - DB_HOST=db
+      - DB_NAME=ntrca_db
+      - DB_USER=myuser
+      - DB_PASS=mypassword
     depends_on:
-      - backend
+      - db
+
+volumes:
+  postgres_data:

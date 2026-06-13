@@ -94,15 +94,22 @@ SIMPLE_JWT = {
 }
 
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#         'OPTIONS': {
+#             'timeout': 20,  # 👈 ADD THIS LINE (Sets timeout window to 20 seconds)
+#         },
+#     }
+# }
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-        'OPTIONS': {
-            'timeout': 20,  # 👈 ADD THIS LINE (Sets timeout window to 20 seconds)
-        },
+        'default': dj_database_url.config(
+            default=os.environ.get('DATABASE_URL', 'postgres://user:password@127.0.0.1:5432/your_db_name'),
+            conn_max_age=600
+        )
     }
-}
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
