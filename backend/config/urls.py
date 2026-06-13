@@ -4,8 +4,15 @@ from django.urls import path,include
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from django.contrib.auth import views as auth_views
+from django.http import HttpResponse
+def home_view(request):
+    return HttpResponse("Welcome to the NTRCA Prep AI API!")
+
+
+
 
 urlpatterns = [
+     path('', home_view), # Resolves the "Not Found" at the root
     path('admin/', admin.site.urls),
     path("api/exam/", include("exam.urls")),
     path("api/", include("exam.urls")),
