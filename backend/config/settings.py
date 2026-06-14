@@ -23,7 +23,19 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "https://ntrca-prep-with-ai.onrender.com",
     "https://ntrca-prep-with-ai-p1p7h7d00-jabed-omor-bappi-s-projects.vercel.app", 
+    "https://ntrca-prep-with-ai.vercel.app",
 ]
+
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "authorization",
+    "content-type",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+]
+
+
 # settings.py
 CORS_ALLOW_ALL_ORIGINS = True
 # Application definition
@@ -93,8 +105,8 @@ from datetime import timedelta
 
 # Custom configurations for Simple JWT
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFTETIME": timedelta(minutes=60),
-    "REFRESH_TOKEN_LIFTETIME": timedelta(days=1),
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
+"REFRESH_TOKEN_LIFETIME": timedelta(days=1),
     
     # 🔌 This line forces Django to update the "Last login" field in the admin panel on successful token generation
     "UPDATE_LAST_LOGIN": True,
