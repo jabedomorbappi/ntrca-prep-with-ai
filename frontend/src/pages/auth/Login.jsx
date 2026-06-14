@@ -17,11 +17,13 @@ export default function Login() {
     
     try {
       // 🎯 Production Ready dynamic base fallbacks instead of hardcoded strings
-      const baseURL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000/";
-      // Ensure smooth slashes when joining paths
-      const cleanBaseUrl = baseURL.endsWith("/") ? baseURL.slice(0, -1) : baseURL;
-      
-      const res = await axios.post(`${cleanBaseUrl}/api/token/`, credentials);
+      // Change this line:
+      const baseURL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/";
+  
+  // Ensure smooth slashes when joining paths
+  const cleanBaseUrl = baseURL.endsWith("/") ? baseURL.slice(0, -1) : baseURL;
+  
+  const res = await axios.post(`${cleanBaseUrl}/api/token/`, credentials);
       
       // ✅ Added await to guarantee context profile updates sync completely before moving
       await login(res.data.access, res.data.refresh); 
