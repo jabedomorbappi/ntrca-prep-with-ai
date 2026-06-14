@@ -1,25 +1,27 @@
 import axios from "axios";
 
-// This looks for an environment variable in your frontend project
+// This pulls from your Vercel Environment Variable (VITE_API_URL)
+// If not found, it defaults to localhost for development
 const baseURL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/";
 
 const api = axios.create({
   baseURL: baseURL,
 });
+
 /**
  * 1. REQUEST INTERCEPTOR
  * Automatically attaches the JWT token to requests,
- * but skips authentication for public routes (registration/login).
+ * but skips authentication for public routes.
  */
 api.interceptors.request.use(
   (config) => {
-    // List of routes that should NOT have an Authorization header
     const publicRoutes = [
       "/api/accounts/register/", 
       "/api/token/", 
       "/api/token/refresh/"
     ];
     
+    // Check if the current request URL is public
     const isPublicRoute = publicRoutes.some((route) => config.url.includes(route));
 
     if (!isPublicRoute) {
@@ -50,8 +52,8 @@ api.interceptors.response.use(
       try {
         const refresh = localStorage.getItem("refresh");
         
-        // Use standard axios for refresh to avoid infinite loops with the 'api' instance
-        const res = await axios.post("http://127.0.0.1:8000/api/token/refresh/", { refresh });
+        // Use 'api' instance instead of 'axios' to keep the production baseURL
+        const res = await api.post("/api/token/refresh/", { refresh });
         
         // Update storage with new token
         localStorage.setItem("access", res.data.access);
