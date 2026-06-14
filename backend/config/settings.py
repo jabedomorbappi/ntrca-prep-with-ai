@@ -24,7 +24,8 @@ CORS_ALLOWED_ORIGINS = [
     "https://ntrca-prep-with-ai.onrender.com",
     "https://ntrca-prep-with-ai-p1p7h7d00-jabed-omor-bappi-s-projects.vercel.app", 
 ]
-
+# settings.py
+CORS_ALLOW_ALL_ORIGINS = True
 # Application definition
 
 INSTALLED_APPS = [
