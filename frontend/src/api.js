@@ -1,10 +1,11 @@
 import axios from "axios";
 
-// Configure the base instance
-const api = axios.create({
-  baseURL: "http://127.0.0.1:8000/",
-});
+// This looks for an environment variable in your frontend project
+const baseURL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/";
 
+const api = axios.create({
+  baseURL: baseURL,
+});
 /**
  * 1. REQUEST INTERCEPTOR
  * Automatically attaches the JWT token to requests,

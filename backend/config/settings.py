@@ -21,7 +21,8 @@ ALLOWED_HOSTS.append("ntrca-prep-with-ai.onrender.com")
 # Update CORS
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
-    "https://ntrca-prep-with-ai.onrender.com", # Add your live frontend URL here
+    "https://ntrca-prep-with-ai.onrender.com",
+    "https://ntrca-prep-with-ai-p1p7h7d00-jabed-omor-bappi-s-projects.vercel.app", 
 ]
 
 # Application definition
