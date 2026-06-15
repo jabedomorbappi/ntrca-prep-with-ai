@@ -11,29 +11,35 @@ export default function Login() {
   const navigate = useNavigate();
 
 const handleLogin = async (e) => {
-  e.preventDefault();
-  setLoading(true);
+    e.preventDefault();
+    setLoading(true);
+    setErrorMessage(""); 
+    
+    // 1. Get the URL explicitly
+    const envUrl = import.meta.env.VITE_API_URL;
+    const fallbackUrl = "https://ntrca-prep-with-ai.onrender.com";
+    const baseURL = envUrl || fallbackUrl;
 
-  try {
-    // This line MUST match your Vercel variable name EXACTLY
-    // Replace your existing baseURL logic with this exact code:
-const baseURL = import.meta.env.VITE_API_URL || "https://ntrca-prep-with-ai.onrender.com";
+    try {
+      // 2. Validate the URL before using it
+      if (!baseURL) throw new Error("API URL is missing");
 
-// Verify it's not empty
-if (!baseURL || baseURL === "undefined") {
-    console.error("Critical Error: API URL is missing!");
-    return;
-}
+      // 3. Ensure no trailing slash issues
+      const cleanBaseUrl = baseURL.endsWith("/") ? baseURL.slice(0, -1) : baseURL;
+      
+      console.log("Attempting to connect to:", `${cleanBaseUrl}/api/token/`);
 
-    const res = await axios.post(`${baseURL}/api/token/`, credentials);
-    await login(res.data.access, res.data.refresh);
-    navigate("/");
-  } catch (err) {
-    console.error("Login failed:", err);
-  } finally {
-    setLoading(false);
-  }
-};
+      const res = await axios.post(`${cleanBaseUrl}/api/token/`, credentials);
+      
+      await login(res.data.access, res.data.refresh); 
+      navigate("/");
+    } catch (err) {
+      console.error("Login failed:", err);
+      setErrorMessage("Connection error. Please try again later.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <>
