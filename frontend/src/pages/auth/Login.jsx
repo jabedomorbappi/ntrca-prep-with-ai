@@ -10,32 +10,28 @@ export default function Login() {
   const [errorMessage, setErrorMessage] = useState(""); 
   const navigate = useNavigate();
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setErrorMessage(""); 
-    
-    try {
-      // 🎯 Production Ready dynamic base fallbacks instead of hardcoded strings
-      // Change this line:
-      const baseURL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/";
-  
-  // Ensure smooth slashes when joining paths
-  const cleanBaseUrl = baseURL.endsWith("/") ? baseURL.slice(0, -1) : baseURL;
-  
-  const res = await axios.post(`${cleanBaseUrl}/api/token/`, credentials);
-      
-      // ✅ Added await to guarantee context profile updates sync completely before moving
-      await login(res.data.access, res.data.refresh); 
-      
-      navigate("/");
-    } catch (err) {
-      console.error("Login authorization error:", err.response?.data || err.message);
-      setErrorMessage("Invalid username or password. Please verify credentials and try again.");
-    } finally {
-      setLoading(false);
+const handleLogin = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+
+  try {
+    // This line MUST match your Vercel variable name EXACTLY
+    const baseURL = import.meta.env.VITE_API_URL; 
+
+    // If it's undefined, we need to know why
+    if (!baseURL) {
+      console.error("VITE_API_URL is not defined in environment variables!");
     }
-  };
+
+    const res = await axios.post(`${baseURL}/api/token/`, credentials);
+    await login(res.data.access, res.data.refresh);
+    navigate("/");
+  } catch (err) {
+    console.error("Login failed:", err);
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <>
