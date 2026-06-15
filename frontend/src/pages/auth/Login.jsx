@@ -16,12 +16,14 @@ const handleLogin = async (e) => {
 
   try {
     // This line MUST match your Vercel variable name EXACTLY
-    const baseURL = import.meta.env.VITE_API_URL; 
+    // Replace your existing baseURL logic with this exact code:
+const baseURL = import.meta.env.VITE_API_URL || "https://ntrca-prep-with-ai.onrender.com";
 
-    // If it's undefined, we need to know why
-    if (!baseURL) {
-      console.error("VITE_API_URL is not defined in environment variables!");
-    }
+// Verify it's not empty
+if (!baseURL || baseURL === "undefined") {
+    console.error("Critical Error: API URL is missing!");
+    return;
+}
 
     const res = await axios.post(`${baseURL}/api/token/`, credentials);
     await login(res.data.access, res.data.refresh);
