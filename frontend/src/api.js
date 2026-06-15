@@ -2,10 +2,11 @@ import axios from "axios";
 
 // This pulls from your Vercel Environment Variable (VITE_API_URL)
 // If not found, it defaults to localhost for development
-const baseURL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/";
+// Ensure we always default to the production URL if the env variable is missing
+const baseURL = import.meta.env.VITE_API_URL || "https://ntrca-prep-with-ai.onrender.com";
 
 const api = axios.create({
-  baseURL: baseURL,
+  baseURL: baseURL.endsWith("/") ? baseURL : `${baseURL}/`, // Ensures a trailing slash
 });
 
 /**

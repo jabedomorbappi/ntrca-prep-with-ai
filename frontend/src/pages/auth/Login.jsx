@@ -11,36 +11,34 @@ export default function Login() {
   const navigate = useNavigate();
 
 const handleLogin = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setErrorMessage(""); 
+  e.preventDefault();
+  setLoading(true);
+  setErrorMessage(""); 
+  
+  // 1. Safeguard the URL extraction
+  const envUrl = import.meta.env.VITE_API_URL;
+  const fallbackUrl = "https://ntrca-prep-with-ai.onrender.com";
+  const baseURL = envUrl || fallbackUrl;
+
+  try {
+    // 2. Remove trailing slashes to prevent url distortion (e.g., //api/token/)
+    const cleanBaseUrl = baseURL.endsWith("/") ? baseURL.slice(0, -1) : baseURL;
     
-    // 1. Get the URL explicitly
-    const envUrl = import.meta.env.VITE_API_URL;
-    const fallbackUrl = "https://ntrca-prep-with-ai.onrender.com";
-    const baseURL = envUrl || fallbackUrl;
+    // This log will print in your browser console so you can see the true destination
+    console.log("Attempting connection to backend:", `${cleanBaseUrl}/api/token/`);
 
-    try {
-      // 2. Validate the URL before using it
-      if (!baseURL) throw new Error("API URL is missing");
-
-      // 3. Ensure no trailing slash issues
-      const cleanBaseUrl = baseURL.endsWith("/") ? baseURL.slice(0, -1) : baseURL;
-      
-      console.log("Attempting to connect to:", `${cleanBaseUrl}/api/token/`);
-
-      const res = await axios.post(`${cleanBaseUrl}/api/token/`, credentials);
-      
-      await login(res.data.access, res.data.refresh); 
-      navigate("/");
-    } catch (err) {
-      console.error("Login failed:", err);
-      setErrorMessage("Connection error. Please try again later.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
+    const res = await axios.post(`${cleanBaseUrl}/api/token/`, credentials);
+    
+    // Save tokens and redirect
+    await login(res.data.access, res.data.refresh); 
+    navigate("/");
+  } catch (err) {
+    console.error("Login authorization error:", err);
+    setErrorMessage("Authentication failed. Please verify your credentials or try again.");
+  } finally {
+    setLoading(false);
+  }
+};
   return (
     <>
       <style>{`

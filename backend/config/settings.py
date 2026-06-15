@@ -23,7 +23,11 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "https://ntrca-prep-with-ai.onrender.com",
     "https://ntrca-prep-with-ai-p1p7h7d00-jabed-omor-bappi-s-projects.vercel.app", 
+  
+
     "https://ntrca-prep-with-ai.vercel.app",
+   
+    "http://localhost:5173", # Keep this for your local development
 ]
 
 CORS_ALLOW_HEADERS = [
@@ -39,7 +43,7 @@ CORS_ALLOW_HEADERS = [
 # settings.py
 CORS_ALLOW_ALL_ORIGINS = True
 # Application definition
-
+CORS_ALLOW_CREDENTIALS = True
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
