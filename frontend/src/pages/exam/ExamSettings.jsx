@@ -26,55 +26,55 @@ export default function ExamSettings() {
   // Fetch count on load
 // Fetch count on load
   useEffect(() => {
-    const fetchCount = async () => {
-      try {
-        setLoadingCount(true);
-        // CHANGE THIS LINE:
-        const res = await api.get(`/api/exam/subtopic-stats/${subtopicId}/`);
-        
-        console.log("API Stats Response:", res.data);
-        
-        // Assuming your backend returns a list of exams, 
-        // and you want the count of questions available.
-        // If 'res.data' is a list of exams, you might want the sum of 'questions' field.
-        const totalQuestions = res.data.reduce((sum, exam) => sum + (exam.questions || 0), 0);
-        setQuestionCount(totalQuestions);
-      } catch (err) {
-        console.error("Failed to fetch stats:", err);
-      } finally {
-        setLoadingCount(false);
-      }
-    };
-    fetchCount();
-  }, [subtopicId]);
-
-  const startExam = async () => {
+  const fetchCount = async () => {
     try {
-      setLoading(true);
-      setErrorMsg("");
-      const res = await api.post("/api/exam/generate/", {
-        topic_id: topicId,
-        subtopic_id: subtopicId,
-        num_questions: numQuestions,
-        difficulty: difficulty,
-        timer_minutes: timer,
-        negative_marking: negative,
-        use_question_bank: useQuestionBank,
-      });
-
-      const examId = res.data?.exam_id || res.data?.snapshot_id;
-      if (!examId || examId === "null" || examId === "undefined") {
-        setErrorMsg("Failed to initialize active mock test sheet workspace.");
-        return;
-      }
-      navigate(`/exam/${examId}`);
+      setLoadingCount(true);
+      const res = await api.get(`/api/exam/subtopic-stats/${subtopicId}/`);
+      
+      // If your backend returns a flat number or a list, ensure this matches:
+      const totalQuestions = Array.isArray(res.data) 
+        ? res.data.reduce((sum, exam) => sum + (exam.questions || 0), 0)
+        : (res.data.total_questions || 0);
+      
+      setQuestionCount(totalQuestions);
     } catch (err) {
-      const backError = err.response?.data?.error || "Error contacting preparation gateway.";
-      setErrorMsg(backError);
+      console.error("Failed to fetch subtopic stats:", err);
     } finally {
-      setLoading(false);
+      setLoadingCount(false);
     }
   };
+  fetchCount();
+}, [subtopicId]);
+
+// 2. Start Exam (Simplified)
+const startExam = async () => {
+  try {
+    setLoading(true);
+    setErrorMsg("");
+    
+    const res = await api.post("/api/exam/generate/", {
+      topic_id: topicId,
+      subtopic_id: subtopicId,
+      num_questions: numQuestions,
+      difficulty: difficulty,
+      timer_minutes: timer,
+      negative_marking: negative,
+      use_question_bank: useQuestionBank,
+    });
+
+    // The backend now returns the ID directly to the public API
+    const examId = res.data?.exam_id || res.data?.snapshot_id;
+    if (examId) {
+      navigate(`/exam/${examId}`);
+    } else {
+      setErrorMsg("Could not generate the exam. Please try again.");
+    }
+  } catch (err) {
+    setErrorMsg("System error: Could not initialize exam.");
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div style={styles.container}>

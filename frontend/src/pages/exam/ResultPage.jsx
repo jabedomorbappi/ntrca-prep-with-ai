@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-// Change this line:
-import api from "../../api"; // Assuming your api.js is in the 'src' folder
+import api from "../../api"; 
 
 export default function ResultPage() {
   const { attemptId } = useParams();
@@ -12,11 +11,11 @@ export default function ResultPage() {
   useEffect(() => {
     const fetchResult = async () => {
       try {
-        const res = await api.get(`/api/exam/review/${attemptId}/`);
-        console.log("DEBUG [API DATA]:", res.data); 
+        // Fetches from your cleaned, auth-free public API
+        const res = await api.get(`/api/exam/result/${attemptId}/`);
         setResult(res.data);
       } catch (err) {
-        console.error("Error:", err);
+        console.error("Result fetch error:", err);
       } finally {
         setLoading(false);
       }
@@ -24,56 +23,57 @@ export default function ResultPage() {
     fetchResult();
   }, [attemptId]);
 
-  if (loading) return <div className="p-5 text-center"><h3>Loading Results...</h3></div>;
-  if (!result) return <div className="p-5 text-center text-danger">Result not found.</div>;
-
-
-  const styles = {
-    card: { border: "1px solid #ddd", borderRadius: "15px", padding: "20px", marginBottom: "20px", backgroundColor: "#fff" },
-    btnCorrect: { backgroundColor: "#198754", color: "white", padding: "10px", width: "100%", textAlign: "left", marginBottom: "5px", borderRadius: "5px" },
-    btnWrong: { backgroundColor: "#dc3545", color: "white", padding: "10px", width: "100%", textAlign: "left", marginBottom: "5px", borderRadius: "5px" },
-    btnDefault: { backgroundColor: "#f8f9fa", padding: "10px", width: "100%", textAlign: "left", marginBottom: "5px", borderRadius: "5px", border: "1px solid #ccc" }
-  };
+  if (loading) return <div className="p-5 text-center"><h3>Loading Assessment Summary...</h3></div>;
+  if (!result) return <div className="p-5 text-center text-danger">Result data not found.</div>;
 
   return (
     <div className="container py-5" style={{ maxWidth: "800px" }}>
-      {/* Header */}
-      <div style={styles.card}>
-        <h2 style={{ color: "#0d6efd" }}>{result.exam_title}</h2>
+      {/* Header Summary */}
+      <div className="card p-4 shadow-sm border-0 mb-4" style={{ borderRadius: "15px" }}>
+        <h2 className="text-primary fw-bold">{result.exam_title}</h2>
         <hr />
-        <div style={{ display: "flex", gap: "20px" }}>
-           <p><strong>Score:</strong> {result.score}</p>
-           <p style={{ color: "green" }}><strong>Correct:</strong> {result.correct}</p>
-           <p style={{ color: "red" }}><strong>Wrong:</strong> {result.wrong}</p>
+        <div className="d-flex gap-4">
+          <p><strong>Score:</strong> {result.score}</p>
+          <p className="text-success"><strong>Correct:</strong> {result.correct}</p>
+          <p className="text-danger"><strong>Wrong:</strong> {result.wrong}</p>
         </div>
       </div>
 
-      {/* Questions */}
-      {result.questions && result.questions.map((q, index) => (
-        <div key={q.id} style={styles.card}>
-          <h5>{index + 1}. {q.question}</h5>
+      {/* Questions Review */}
+      {result.questions?.map((q, index) => (
+        <div key={q.id} className="card p-4 mb-3 shadow-sm border-0" style={{ borderRadius: "15px" }}>
+          <h5 className="mb-3 fw-bold">{index + 1}. {q.question}</h5>
           
-          <div style={{ marginTop: "15px" }}>
-            {q.options && q.options.map((opt) => {
+          <div className="d-flex flex-column gap-2">
+            {q.options?.map((opt) => {
               const isSelected = opt.text === q.selected_answer;
-              const isCorrectOption = opt.text === q.correct_answer;
+              const isCorrect = opt.text === q.correct_answer;
               
-              let style = styles.btnDefault;
-              if (isSelected && q.is_correct) style = styles.btnCorrect;
-              else if (isSelected && !q.is_correct) style = styles.btnWrong;
-              else if (isCorrectOption) style = { ...styles.btnDefault, border: "2px solid green" };
+              // Dynamic styling based on answer correctness
+              let btnClass = "btn btn-light border";
+              if (isSelected && q.is_correct) btnClass = "btn btn-success text-white";
+              else if (isSelected && !q.is_correct) btnClass = "btn btn-danger text-white";
+              else if (isCorrect) btnClass = "btn btn-outline-success border-2";
 
               return (
-                <div key={opt.id} style={style}>
-                  {opt.text} {isSelected && <span>(Your choice)</span>}
+                <div key={opt.id} className={`${btnClass} text-start p-2 rounded`}>
+                  {opt.text} {isSelected && <small className="fw-bold ms-2">(Your choice)</small>}
                 </div>
               );
             })}
           </div>
+
+          {/* Educational Explanation */}
+          {q.explanation && (
+            <div className="mt-3 p-3 bg-light rounded border-start border-primary border-4">
+              <small className="d-block fw-bold text-primary mb-1">💡 Explanation:</small>
+              {q.explanation}
+            </div>
+          )}
         </div>
       ))}
 
-      <button className="btn btn-primary w-100 mt-3" onClick={() => navigate("/")}>
+      <button className="btn btn-primary w-100 mt-3 py-2 fw-bold" onClick={() => navigate("/")}>
         Back to Dashboard
       </button>
     </div>

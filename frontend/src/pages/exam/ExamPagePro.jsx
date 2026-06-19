@@ -1,122 +1,72 @@
-// import { useEffect, useCallback } from "react";
 import React, { useCallback, useState, useEffect, useRef } from 'react';
 import useTimer from "../../hooks/useTimer";
 import { useExam } from "../../context/ExamContext";
 import { useNavigate, useParams } from "react-router-dom";
-import api from "../../api"; // Make sure the path is correct (../api.js)
+import api from "../../api";
 
 export default function ExamPagePro() {
-  console.log("COMPONENT MOUNTED");
-  
   const { exam, setExam, answers, setAnswers, marked, setMarked, time, setTime } = useExam();
+  const [activeAttemptId, setActiveAttemptId] = useState(null); // Managed in state
   const navigate = useNavigate();
   const { examId } = useParams();
   const hasStarted = useRef(false);
 
-
-
-
-
   // 1. SUBMIT EXAM
   const submitExam = useCallback(async () => {
-    const attemptId = localStorage.getItem("attempt_id");
-    if (!attemptId) return;
+    if (!activeAttemptId) return;
 
     try {
       await api.post("/api/exam/submit-attempt/", {
-        attempt_id: parseInt(attemptId),
+        attempt_id: activeAttemptId,
         exam_id: parseInt(examId),
         answers: answers 
       });
-      localStorage.removeItem("attempt_id");
-      navigate(`/result/${attemptId}`);
+      navigate(`/result/${activeAttemptId}`);
     } catch (err) {
       console.error("SUBMIT ERROR:", err);
+      alert("Error submitting exam. Please try again.");
     }
-  }, [answers, examId, navigate]);
+  }, [answers, examId, navigate, activeAttemptId]);
 
-
-
-
-
-  // 2. LOAD EXAM & SYNC TIMER (The Engine)
+  // 2. LOAD EXAM
   useEffect(() => {
-    if (hasStarted.current) return;
-    if (!examId) return;
-
+    if (hasStarted.current || !examId) return;
     hasStarted.current = true;
-    let isCancelled = false;
 
-   const startExam = async () => {
-    try {
-        // 1. Create the attempt
+    const startExam = async () => {
+      try {
+        // Start the attempt and capture the ID
         const startRes = await api.post("/api/exam/start/", { exam_id: examId });
-        localStorage.setItem("attempt_id", startRes.data.attempt_id);
+        setActiveAttemptId(startRes.data.attempt_id);
         
-        // 2. Fetch the actual exam details to populate the UI
-        console.log("Fetching exam details for ID:", examId);
+        // Fetch exam content
         const examRes = await api.get(`/api/exam/detail/${examId}/`);
-        
-        // 3. Set state to finish loading
-        console.log("Exam data loaded:", examRes.data);
         setExam(examRes.data); 
-    } catch (err) {
+      } catch (err) {
         console.error("Error during startup:", err);
-    }
-};
+      }
+    };
 
     startExam();
-    return () => { isCancelled = true; };
   }, [examId, setExam]);
 
-
-
-
-
-  // -----------------------------
-// 3. TIMER HOOK
-  // Calculate based on API data
+  // 3. TIMER
   const finalMinutes = exam?.duration_minutes || (exam?.questions?.length * 0.6) || 30;
-  const durationInSeconds = finalMinutes * 60;
+  useTimer(finalMinutes * 60, setTime, submitExam);
 
-  // Pass it to the hook
-  useTimer(durationInSeconds, setTime, submitExam);
-
-
-
-
-  // 3. TIMER HOOK
-  // const safeSetTime = typeof setTime === "function" ? setTime : () => {};
-  // useTimer(time, safeSetTime, submitExam);
-
-  // 4. UI HANDLERS
-  const selectAnswer = (qId, optionId) => {
-    setAnswers(prev => ({ ...prev, [qId]: optionId }));
-  };
-
-  const toggleMark = (qId) => {
-    setMarked(prev => ({ ...prev, [qId]: !prev[qId] }));
-  };
+  // 4. HANDLERS
+  const selectAnswer = (qId, optionId) => setAnswers(prev => ({ ...prev, [qId]: optionId }));
+  const toggleMark = (qId) => setMarked(prev => ({ ...prev, [qId]: !prev[qId] }));
 
   // 5. LOADING GUARD
-  // 5. LOADING GUARD
-  console.log("GUARD CHECK. exam is:", exam); // See what is actually in 'exam'
-  
   if (!exam || !exam.questions || exam.questions.length === 0) {
     return (
       <div className="d-flex justify-content-center align-items-center" style={{ height: '100vh', background: '#f8fafc' }}>
-        <div className="text-center">
-          <div className="spinner-border text-primary mb-3" role="status"></div>
-          <h4 className="text-secondary">Loading Exam Workspace...</h4>
-          <p>Debug: {exam ? "Exam loaded but no questions" : "Exam not loaded"}</p>
-        </div>
+        <div className="spinner-border text-primary" role="status"></div>
       </div>
     );
   }
 
-  // -----------------------------
-  // UI LAYOUT RENDER
-  // -----------------------------
   return (
     <div className="container-fluid py-4" style={{ background: "#f8fafc", minHeight: "100vh" }}>
       <div className="row max-width-1200 mx-auto">
@@ -125,34 +75,26 @@ export default function ExamPagePro() {
             <div className="d-flex justify-content-between align-items-center border-bottom pb-3 mb-4">
               <h2 className="h4 m-0 text-dark fw-bold">🔥 {exam.title}</h2>
               <div className="badge bg-danger fs-6 p-2 px-3 rounded-pill">
-                ⏱️ Time Left: {Math.floor(time / 60)}m {time % 60}s
+                ⏱️ {Math.floor(time / 60)}m {time % 60}s
               </div>
             </div>
 
             {exam.questions.map((q, index) => (
-              <div key={q.id} className="p-3 mb-4 border rounded-3 bg-white shadow-none">
+              <div key={q.id} className="p-3 mb-4 border rounded-3 bg-white">
                 <h5 className="mb-3 text-slate-800 fw-semibold">Q{index + 1}. {q.question}</h5>
-                <div className="options-group mb-3">
-                  {q.options?.map((opt) => (
-                    <div key={opt.id} className="form-check p-2 rounded hover-bg-light transition-all mb-2" style={{ border: "1px solid #f1f5f9" }}>
-                      <input
-                        className="form-check-input ms-1"
-                        type="radio"
-                        name={`question-${q.id}`}
-                        id={`opt-${opt.id}`}
-                        checked={answers[q.id] === opt.id}
-                        onChange={() => selectAnswer(q.id, opt.id)}
-                      />
-                      <label className="form-check-label ps-3 text-secondary w-100 cursor-pointer" htmlFor={`opt-${opt.id}`}>
-                        {opt.text}
-                      </label>
-                    </div>
-                  ))}
-                </div>
-                <button 
-                  className={`btn btn-sm ${marked[q.id] ? 'btn-warning' : 'btn-outline-secondary'}`}
-                  onClick={() => toggleMark(q.id)}
-                >
+                {q.options?.map((opt) => (
+                  <div key={opt.id} className="form-check p-2 mb-2 border rounded" style={{ borderColor: "#f1f5f9" }}>
+                    <input
+                      className="form-check-input ms-1"
+                      type="radio"
+                      name={`question-${q.id}`}
+                      checked={answers[q.id] === opt.id}
+                      onChange={() => selectAnswer(q.id, opt.id)}
+                    />
+                    <label className="form-check-label ps-3 text-secondary">{opt.text}</label>
+                  </div>
+                ))}
+                <button className={`btn btn-sm ${marked[q.id] ? 'btn-warning' : 'btn-outline-secondary'}`} onClick={() => toggleMark(q.id)}>
                   📌 {marked[q.id] ? "Unmark" : "Mark for Review"}
                 </button>
               </div>
@@ -167,16 +109,12 @@ export default function ExamPagePro() {
           <div className="card p-3 shadow-sm border-0 sticky-top" style={{ borderRadius: "16px", top: "20px" }}>
             <h5 className="text-muted mb-3 border-bottom pb-2 fw-bold">🎯 Progress Grid</h5>
             <div className="d-grid gap-2" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
-              {exam.questions.map((q, i) => {
-                const isAnswered = answers[q.id] !== undefined;
-                const isMarked = marked[q.id];
-                let btnClass = isAnswered ? "btn-success text-white" : isMarked ? "btn-warning" : "btn-light border";
-                return (
-                  <button key={q.id} onClick={() => window.scrollTo({ top: i * 360, behavior: "smooth" })} className={`btn ${btnClass}`}>
-                    {i + 1}
-                  </button>
-                );
-              })}
+              {exam.questions.map((q, i) => (
+                <button key={q.id} onClick={() => window.scrollTo({ top: i * 350, behavior: "smooth" })} 
+                  className={`btn ${answers[q.id] ? "btn-success" : marked[q.id] ? "btn-warning" : "btn-light border"}`}>
+                  {i + 1}
+                </button>
+              ))}
             </div>
           </div>
         </div>

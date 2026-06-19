@@ -17,34 +17,32 @@ export default function SubTopics() {
     }
   }, [topicId]);
 
-  const fetchSubtopicsAndSnapshots = async () => {
-    try {
-      setLoading(true);
-      const subtopicsRes = await api.get(`/api/syllabus/subtopics/${topicId}/`);
-      const subtopicsList = subtopicsRes.data;
-      setSubtopics(subtopicsList);
+// Add this inside your fetchSubtopicsAndSnapshots function
+const fetchSubtopicsAndSnapshots = async () => {
+  try {
+    setLoading(true);
+    const subtopicsRes = await api.get(`/api/syllabus/subtopics/${topicId}/`);
+    setSubtopics(subtopicsRes.data);
 
-      const snapshotMap = {};
-      await Promise.all(
-        subtopicsList.map(async (sub) => {
-          try {
-            // Using your new active-snapshot endpoint
-            const res = await api.get(`/api/exam/active-snapshot/${sub.id}/`);
-            if (res.data) {
-              snapshotMap[sub.id] = res.data;
-            }
-          } catch (err) {
-            console.error(`No active snapshot for subtopic ${sub.id}`);
-          }
-        })
-      );
-      setSnapshots(snapshotMap);
-    } catch (err) {
-      console.error("LOAD ERROR:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+    // Fetch snapshots only after subtopics are loaded
+    const snapshotMap = {};
+    await Promise.all(
+      subtopicsRes.data.map(async (sub) => {
+        try {
+          const res = await api.get(`/api/exam/active-snapshot/${sub.id}/`);
+          if (res.data) snapshotMap[sub.id] = res.data;
+        } catch (err) {
+          // Silent failure is fine here if no active session exists
+        }
+      })
+    );
+    setSnapshots(snapshotMap);
+  } catch (err) {
+    console.error("Critical Load Error:", err);
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div style={styles.container}>

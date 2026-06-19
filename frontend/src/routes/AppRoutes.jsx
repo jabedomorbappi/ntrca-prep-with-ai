@@ -1,56 +1,37 @@
-import { Routes, Route, Navigate, Outlet } from "react-router-dom";
-import ProtectedRoute from "./ProtectedRoute";
-import Navbar from "../components/Navbar";
+import { Routes, Route, Navigate } from "react-router-dom";
+import AppLayout from "../layouts/AppLayout";
 
-// Authentication Pages
-import Login from "../pages/auth/Login";
-import Register from "../pages/auth/Register";
-import RequestReset from "../pages/auth/RequestReset"; // Added
-import ResetConfirm from "../pages/auth/ResetConfirm"; // Added
-
-// Operational Pages
+// Operational Pages (Everything is now public)
 import Home from "../pages/study/Home";
 import SubTopics from "../pages/study/SubTopics";
 import ExamSettings from "../pages/exam/ExamSettings";
 import ExamPagePro from "../pages/exam/ExamPagePro";
-import ResultPage from "../pages/exam/ResultPage"; // Updated path
+import ResultPage from "../pages/exam/ResultPage";
 import ExamHistoryPage from "../pages/exam/ExamHistoryPage";
 import TopicsPage from "../pages/study/TopicsPage";
 import StudyPage from "../pages/study/StudyPage";
-import ProfilePage from "../pages/user/ProfilePage"; 
-import AppLayout from "../layouts/AppLayout";
+// import ProfilePage from "../pages/user/ProfilePage"; 
 
 export default function AppRoutes() {
   return (
     <Routes>
-      {/* 🔓 Public Authentication Portal Routes */}
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/forgot-password" element={<RequestReset />} />
-      <Route path="/reset-password/:uidb64/:token" element={<ResetConfirm />} />
-
-    <Route element={<AppLayout />}></Route>
-
-      {/* 🌐 MIXED / PUBLIC ACCESS BLOCK */}
       <Route element={<AppLayout />}>
         <Route path="/" element={<Home />} />
         <Route path="/topics/:subjectId" element={<TopicsPage />} />
         <Route path="/subtopics/:topicId" element={<SubTopics />} />
         <Route path="/study/:subtopicId" element={<StudyPage />} />
         
-        {/* 🔒 PROTECTED INDIVIDUAL DATA BLOCK */}
-        <Route element={<ProtectedRoute />}>
-          <Route path="/profile" element={<ProfilePage />} />
-          <Route path="/history" element={<ExamHistoryPage />} />
-          <Route path="/exam-settings/:topicId/:subtopicId" element={<ExamSettings />} />
-          <Route path="/exam/:examId" element={<ExamPagePro />} />
-          <Route path="/result/:attemptId" element={<ResultPage />} />
-          <Route path="/review/:attemptId" element={<ExamHistoryPage />} />
-        </Route>
+        {/* All formerly protected pages are now open to the public */}
+        {/* <Route path="/profile" element={<ProfilePage />} /> */}
+        <Route path="/history" element={<ExamHistoryPage />} />
+        <Route path="/exam-settings/:topicId/:subtopicId" element={<ExamSettings />} />
+        <Route path="/exam/:examId" element={<ExamPagePro />} />
+        <Route path="/result/:attemptId" element={<ResultPage />} />
+        <Route path="/review/:attemptId" element={<ExamHistoryPage />} />
       </Route>
 
-      {/* 🚨 Catch-all */}
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      {/* Redirect unknown routes back to Home instead of Login */}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
