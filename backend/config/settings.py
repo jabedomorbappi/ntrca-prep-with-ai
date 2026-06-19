@@ -19,16 +19,13 @@ ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(","
 # If the environment variable isn't set, add your Render domain
 ALLOWED_HOSTS.append("ntrca-prep-with-ai.onrender.com")
 
-# Update CORS
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
-    "https://ntrca-prep-with-ai.onrender.com",
-    "https://ntrca-prep-with-ai-p1p7h7d00-jabed-omor-bappi-s-projects.vercel.app", 
-  
+    "https://ntrca-prep-with-ai.vercel.app",  # production domain
+]
 
-    "https://ntrca-prep-with-ai.vercel.app",
-   
-    "http://localhost:5173", # Keep this for your local development
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://ntrca-prep-with-ai-[\w-]+-jabed-omor-bappi-s-projects\.vercel\.app$",
 ]
 
 CORS_ALLOW_HEADERS = [
