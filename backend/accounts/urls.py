@@ -1,6 +1,6 @@
 from django.urls import path
-from .views import RegisterView, get_user_profile  # 👈 
+
+# Even if you have no paths, the variable must exist
 urlpatterns = [
-    path('register/', RegisterView.as_view(), name='register'),
-    path('profile/', get_user_profile, name='user-profile'),
+    # Add paths here if you add any in the future
 ]

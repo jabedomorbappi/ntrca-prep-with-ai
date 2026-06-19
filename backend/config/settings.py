@@ -10,7 +10,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 # --- 🔐 SECURITY DEFINITIONS FROM .env ---
-
+import os
+print("DB_HOST:", os.getenv("DATABASE_URL")) # Check if this prints correctly
 SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-&)4xrk^s$u#o&p0$vopli#0do51jj-3_p!s94erfkep88&usib")
 DEBUG = os.environ.get("DEBUG", "False").lower() == "true"
 # Update ALLOWED_HOSTS
@@ -78,16 +79,30 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'config.urls'
+from datetime import timedelta
+# backend/settings.py
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ),
-    'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticated',
-    ),
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.AllowAny',
+    ],
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        # You can keep your authentication classes here, 
+        # but the AllowAny permission above makes them optional.
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
+    ],
 }
 
+
+# # Custom configurations for Simple JWT
+# SIMPLE_JWT = {
+#     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
+# "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+    
+#     # 🔌 This line forces Django to update the "Last login" field in the admin panel on successful token generation
+#     "UPDATE_LAST_LOGIN": True,
+# }
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -107,25 +122,9 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 from datetime import timedelta
 
-# Custom configurations for Simple JWT
-SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
-"REFRESH_TOKEN_LIFETIME": timedelta(days=1),
-    
-    # 🔌 This line forces Django to update the "Last login" field in the admin panel on successful token generation
-    "UPDATE_LAST_LOGIN": True,
-}
 
 
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#         'OPTIONS': {
-#             'timeout': 20,  # 👈 ADD THIS LINE (Sets timeout window to 20 seconds)
-#         },
-#     }
-# }
+
 
 DATABASE_URL = os.environ.get('DATABASE_URL')
 

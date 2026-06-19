@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+
 from syllabus.models import Topic, SubTopic
 from question_bank.models import Option
 from .exam_service import generate_exam
@@ -15,8 +15,10 @@ from .models import (
     ExamAttemptAnswer, 
     ExamSnapshot
 )
+from rest_framework.permissions import AllowAny
 
 @api_view(["POST"])
+@permission_classes([AllowAny])
 def create_exam(request):
     snapshot_id = request.data.get("snapshot_id")
 
@@ -107,6 +109,7 @@ def create_exam(request):
         "is_existing": False
     })
 @api_view(["POST"])
+@permission_classes([AllowAny])
 def start_exam(request):
     snapshot_id = request.data.get("snapshot_id")
     exam_id = request.data.get("exam_id")
@@ -167,6 +170,7 @@ def start_exam(request):
         print(f"DEBUG: Start Exam Error: {str(e)}")
         return Response({"error": str(e)}, status=500)
 @api_view(["POST"])
+@permission_classes([AllowAny])
 def save_answer(request):
     try:
         attempt_id = request.data.get("attempt_id")
@@ -189,6 +193,7 @@ def save_answer(request):
         return Response({"error": str(e)}, status=500)
 
 @api_view(["POST"])
+@permission_classes([AllowAny])
 def submit_attempt(request):
     attempt_id = request.data.get("attempt_id")
     exam_id = request.data.get("exam_id")
@@ -229,6 +234,7 @@ def submit_attempt(request):
     })
 
 @api_view(["GET"])
+@permission_classes([AllowAny])
 def exam_detail(request, exam_id):
     try:
         exam = Exam.objects.get(id=exam_id)
@@ -255,6 +261,7 @@ def exam_detail(request, exam_id):
         return Response({"error": "Exam not found"}, status=404)
 
 @api_view(["GET"])
+@permission_classes([AllowAny])
 def exam_history(request):
     attempts = ExamAttempt.objects.all().order_by("-started_at")
     return Response([
@@ -271,6 +278,7 @@ def exam_history(request):
     ])
 
 @api_view(["GET"])
+@permission_classes([AllowAny])
 def exam_review(request, attempt_id):
     try:
         attempt = ExamAttempt.objects.get(id=attempt_id)
@@ -304,6 +312,7 @@ def exam_review(request, attempt_id):
         return Response({"error": "Attempt not found"}, status=404)
 
 @api_view(["GET"])
+@permission_classes([AllowAny])
 def exam_analytics(request, attempt_id):
     try:
         attempt = ExamAttempt.objects.get(id=attempt_id)
@@ -328,6 +337,7 @@ def exam_analytics(request, attempt_id):
         return Response({"error": "Attempt not found"}, status=404)
 
 @api_view(["GET"])
+@permission_classes([AllowAny])
 def subtopic_exam_status(request, subtopic_id):
     exams = Exam.objects.filter(subtopic_id=subtopic_id).order_by("-created_at")
     data = []
@@ -343,6 +353,7 @@ def subtopic_exam_status(request, subtopic_id):
     return Response(data)
 
 @api_view(["GET"])
+@permission_classes([AllowAny])
 def exam_snapshots(request, subtopic_id):
     snapshots = ExamSnapshot.objects.filter(subtopic_id=subtopic_id).order_by("-created_at")
     return Response([
@@ -359,6 +370,7 @@ def exam_snapshots(request, subtopic_id):
     ])
 
 @api_view(["GET"])
+@permission_classes([AllowAny])
 def get_exam_result(request, attempt_id):
     try:
         attempt = ExamAttempt.objects.get(id=attempt_id)
@@ -373,14 +385,16 @@ def get_exam_result(request, attempt_id):
     except ExamAttempt.DoesNotExist:
         return Response({"error": "Attempt not found"}, status=404)
     
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.permissions import AllowAny
+
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@authentication_classes([])  # tells DRF not to even attempt to validate the token
+@permission_classes([AllowAny])
 def get_active_snapshot(request, subtopic_id):
-    # Change 'is_completed=False' to 'is_used=False'
     active_snapshot = ExamSnapshot.objects.filter(
         subtopic_id=subtopic_id,
-        # user=request.user,  # Uncomment this only if your model has a 'user' field
-        is_used=False        # Use 'is_used' instead of 'is_completed'
+        is_used=False
     ).order_by("-created_at").first()
 
     if not active_snapshot:
@@ -392,87 +406,3 @@ def get_active_snapshot(request, subtopic_id):
         "difficulty": active_snapshot.difficulty,
         "created_at": active_snapshot.created_at
     })
-
-
-import json
-from django.contrib.auth import get_user_model
-from django.contrib.auth.tokens import default_token_generator
-from django.utils.http import urlsafe_base64_encode
-from django.utils.encoding import force_bytes
-from django.core.mail import send_mail
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-
-User = get_user_model()
-
-@csrf_exempt
-def request_password_reset(request):
-    if request.method != 'POST':
-        return JsonResponse({"error": "Invalid request method. Use POST."}, status=405)
-
-    try:
-        # Debugging: Print raw request body to your terminal
-        print("DEBUG: Received request body:", request.body.decode('utf-8'))
-        
-        data = json.loads(request.body)
-        email = data.get('email')
-        
-        if not email:
-            return JsonResponse({"error": "Email field is required"}, status=400)
-            
-        user = User.objects.filter(email=email).first()
-        
-        if user:
-            token = default_token_generator.make_token(user)
-            uid = urlsafe_base64_encode(force_bytes(user.pk))
-            
-            # The reset link for your React frontend
-            reset_link = f"http://localhost:5173/reset-password/{uid}/{token}"
-            
-            send_mail(
-    subject='Password Reset Request',
-    message=f'Click here to reset your password: {reset_link}',
-    from_email=None,  # This tells Django to use the DEFAULT_FROM_EMAIL in settings.py
-    recipient_list=[email],
-    fail_silently=False,
-)
-            return JsonResponse({"message": "Reset link sent to your email!"})
-        
-        return JsonResponse({"error": "Email not found"}, status=404)
-        
-    except json.JSONDecodeError:
-        return JsonResponse({"error": "Invalid JSON format"}, status=400)
-    except Exception as e:
-        print("DEBUG: Exception:", str(e))
-        return JsonResponse({"error": str(e)}, status=500)
-
-from django.contrib.auth.tokens import default_token_generator
-from django.utils.http import urlsafe_base64_decode
-from django.contrib.auth import get_user_model
-
-User = get_user_model()
-
-@csrf_exempt
-def reset_password_confirm(request, uidb64, token):
-    if request.method != 'POST':
-        return JsonResponse({"error": "Use POST"}, status=405)
-    
-    try:
-        # 1. Decode the UID
-        uid = urlsafe_base64_decode(uidb64).decode()
-        user = User.objects.get(pk=uid)
-        
-        # 2. Verify the Token
-        if default_token_generator.check_token(user, token):
-            data = json.loads(request.body)
-            new_password = data.get('password')
-            
-            # 3. Update Password
-            user.set_password(new_password)
-            user.save()
-            return JsonResponse({"message": "Password updated successfully!"})
-        
-        return JsonResponse({"error": "Invalid or expired token"}, status=400)
-    
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=400)        
