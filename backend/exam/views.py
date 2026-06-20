@@ -106,11 +106,11 @@ def create_exam(request):
             "is_existing": False
         })
 
-    except Exception as e:
-        # LOG THE FULL ERROR TO RENDER CONSOLE
-        print("--- CRITICAL EXAM GENERATION ERROR ---")
+    except Exception:
+        # This will reveal the exact line causing the crash in Render Logs
+        print("--- CRITICAL EXAM ERROR TRACEBACK ---")
         traceback.print_exc() 
-        return Response({"error": "Internal Server Error: " + str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({"error": "Check server logs for traceback"}, status=500)
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def start_exam(request):

@@ -6,7 +6,9 @@ from ai_engine.mcq_generator import generate_mcqs
 
 def generate_exam(topic, subtopic, num_questions, difficulty, timer_minutes=20, use_question_bank=True):
     # LAZY IMPORTS: Fixes the ImportError by loading models only when called
-    from .models import Exam, ExamQuestion, ExamOption, QuestionBank
+    # from .models import Exam, ExamQuestion, ExamOption, QuestionBank
+    from .models import Exam, ExamQuestion, ExamOption
+    from question_bank.models import QuestionBank
 
     topic_name = topic.name
     subtopic_name = subtopic.name if subtopic else ""
