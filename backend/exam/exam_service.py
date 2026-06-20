@@ -41,7 +41,11 @@ def generate_exam(topic, subtopic, num_questions, difficulty, timer_minutes=20, 
         return {"status": "success", "exam_id": exam.id, "mode": "banked"}
 
     # 3. AI GENERATION & EFFICIENT BULK PERSISTENCE
-    raw_data = generate_mcqs(topic_name, subtopic_name, num_questions, difficulty)
+    # raw_data = generate_mcqs(topic_name, subtopic_name, num_questions, difficulty)
+    try:
+        raw_data = generate_mcqs(topic_name, subtopic_name, num_questions, difficulty)
+    except Exception as e:
+        return {"status": "error", "message": f"AI provider failed: {str(e)}"}
     data = parse_mcq_json(raw_data)
     if not data: return {"status": "error", "message": "AI failed"}
 

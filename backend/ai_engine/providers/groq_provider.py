@@ -10,7 +10,8 @@ class GroqProvider(AIProvider):
         self.client = Groq(api_key=api_key)
 
     def generate(self, prompt: str) -> str:
-        model_name = "grok-2" # or grok-beta / grok-4.3
+        # model_name = "grok-2" # or grok-beta / grok-4.3
+        model_name = "llama-3.3-70b-versatile"
         try:
             print(f"📡 [xAI Grok] Attempting connection via model: {model_name}...")
             completion = self.client.chat.completions.create(

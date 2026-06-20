@@ -16,98 +16,101 @@ from .models import (
     ExamSnapshot
 )
 from rest_framework.permissions import AllowAny
+import traceback
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework import status
+from .models import Exam, ExamSnapshot
+from syllabus.models import Topic, SubTopic
+from .exam_service import generate_exam
+
+
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def create_exam(request):
-    snapshot_id = request.data.get("snapshot_id")
+    try:
+        snapshot_id = request.data.get("snapshot_id")
 
-    # 🎯 IF SNAPSHOT_ID IS PROVIDED, DIRECTLY RESUME IT
-    if snapshot_id:
-        snapshot = ExamSnapshot.objects.filter(id=snapshot_id).first()
-        if not snapshot:
-            return Response({"error": "Session not found"}, status=404)
-        return Response({
-            "snapshot_id": snapshot.id,
-            "questions": snapshot.questions_json,
-            "is_existing": True
-        })
-
-    topic_id = request.data.get("topic_id")
-    subtopic_id = request.data.get("subtopic_id")
-    num_questions = int(request.data.get("num_questions", 10))
-    difficulty = request.data.get("difficulty", "medium")
-    timer_minutes = int(request.data.get("timer_minutes", 20))
-    use_question_bank = request.data.get("use_question_bank", True)
-
-    # Use filter().first() to avoid DoesNotExist/MultipleObjectsReturned crashes
-    topic = Topic.objects.filter(id=topic_id).first()
-    subtopic = SubTopic.objects.filter(id=subtopic_id).first() if subtopic_id else None
-
-    if not topic:
-        return Response({"error": "Topic not found."}, status=404)
-
-    # =====================================================================
-    # 🔥 STEP 1: CHECK SNAPSHOT
-    # =====================================================================
-    if use_question_bank:
-        snapshot = ExamSnapshot.objects.filter(
-            topic=topic,
-            subtopic=subtopic,
-            num_questions=num_questions,
-            difficulty=difficulty,
-            is_used=False
-        ).first()
-
-        if snapshot:
-            existing_exam_id = None
-            if snapshot.questions_json and isinstance(snapshot.questions_json, list) and len(snapshot.questions_json) > 0:
-                existing_exam_id = snapshot.questions_json[0].get("exam_id")
-
-            if not existing_exam_id:
-                matched_exam = Exam.objects.filter(topic=topic, subtopic=subtopic, difficulty=difficulty).first()
-                if matched_exam:
-                    existing_exam_id = matched_exam.id
-
+        # 1. Handle Snapshot Resumption
+        if snapshot_id:
+            snapshot = ExamSnapshot.objects.filter(id=snapshot_id).first()
+            if not snapshot:
+                return Response({"error": "Session not found"}, status=status.HTTP_404_NOT_FOUND)
             return Response({
                 "snapshot_id": snapshot.id,
-                "exam_id": existing_exam_id,
                 "questions": snapshot.questions_json,
                 "is_existing": True
             })
 
-    # =====================================================================
-    # 📡 STEP 2: EXECUTE MAIN EXAM GENERATOR SYSTEM
-    # =====================================================================
-    result = generate_exam(
-        topic,
-        subtopic,
-        num_questions,
-        difficulty,
-        timer_minutes=timer_minutes,
-        use_question_bank=use_question_bank
-    )
+        # 2. Extract and Validate Input
+        topic_id = request.data.get("topic_id")
+        subtopic_id = request.data.get("subtopic_id")
+        num_questions = int(request.data.get("num_questions", 10))
+        difficulty = request.data.get("difficulty", "medium")
+        timer_minutes = int(request.data.get("timer_minutes", 20))
+        use_question_bank = request.data.get("use_question_bank", True)
 
-    if result.get("status") == "error":
-        return Response(
-            {"error": result.get("message"), "code": result.get("code")}, 
-            status=status.HTTP_400_BAD_REQUEST
+        topic = Topic.objects.filter(id=topic_id).first()
+        subtopic = SubTopic.objects.filter(id=subtopic_id).first() if subtopic_id else None
+
+        if not topic:
+            return Response({"error": "Topic not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # 3. Check for existing unused snapshot
+        if use_question_bank:
+            snapshot = ExamSnapshot.objects.filter(
+                topic=topic,
+                subtopic=subtopic,
+                num_questions=num_questions,
+                difficulty=difficulty,
+                is_used=False
+            ).first()
+
+            if snapshot:
+                # Safely extract existing exam_id
+                existing_exam_id = None
+                if snapshot.questions_json and isinstance(snapshot.questions_json, list) and len(snapshot.questions_json) > 0:
+                    existing_exam_id = snapshot.questions_json[0].get("exam_id")
+
+                return Response({
+                    "snapshot_id": snapshot.id,
+                    "exam_id": existing_exam_id,
+                    "questions": snapshot.questions_json,
+                    "is_existing": True
+                })
+
+        # 4. Generate New Exam
+        result = generate_exam(
+            topic, subtopic, num_questions, difficulty, 
+            timer_minutes=timer_minutes, use_question_bank=use_question_bank
         )
 
-    if use_question_bank:
-        ExamSnapshot.objects.create(
-            topic=topic,
-            subtopic=subtopic,
-            num_questions=num_questions,
-            difficulty=difficulty,
-            questions_json=result.get("questions", [])
-        )
+        if result.get("status") == "error":
+            return Response({"error": result.get("message")}, status=status.HTTP_400_BAD_REQUEST)
 
-    return Response({
-        "status": "success",
-        "exam_id": result.get("exam_id"),
-        "is_existing": False
-    })
+        # 5. Save Snapshot for reuse
+        if use_question_bank:
+            ExamSnapshot.objects.create(
+                topic=topic,
+                subtopic=subtopic,
+                num_questions=num_questions,
+                difficulty=difficulty,
+                questions_json=result.get("questions", [])
+            )
+
+        return Response({
+            "status": "success",
+            "exam_id": result.get("exam_id"),
+            "is_existing": False
+        })
+
+    except Exception as e:
+        # LOG THE FULL ERROR TO RENDER CONSOLE
+        print("--- CRITICAL EXAM GENERATION ERROR ---")
+        traceback.print_exc() 
+        return Response({"error": "Internal Server Error: " + str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def start_exam(request):

@@ -11,7 +11,8 @@ class GeminiProvider(AIProvider):
         self.client = genai.Client(api_key=self.api_key)
 
     def generate(self, prompt: str) -> str:
-        models_to_try = ["gemini-2.5-flash", "gemini-1.5-pro"]
+        # models_to_try = ["gemini-2.5-flash", "gemini-1.5-pro"]
+        models_to_try = ["gemini-2.5-flash-lite", "gemini-flash-latest"]
         
         for model_name in models_to_try:
             try:
