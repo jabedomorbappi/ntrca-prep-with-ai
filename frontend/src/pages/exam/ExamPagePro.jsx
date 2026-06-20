@@ -5,11 +5,22 @@ import { useNavigate, useParams } from "react-router-dom";
 import api from "../../api";
 
 export default function ExamPagePro() {
-  const { exam, setExam, answers, setAnswers, marked, setMarked, time, setTime } = useExam();
-  const [activeAttemptId, setActiveAttemptId] = useState(null); // Managed in state
-  const navigate = useNavigate();
-  const { examId } = useParams();
-  const hasStarted = useRef(false);
+  const examContext = useExam() || {}; 
+const { 
+  exam = null, 
+  setExam = () => {}, 
+  answers = {}, 
+  setAnswers = () => {}, 
+  marked = {}, 
+  setMarked = () => {}, 
+  time, 
+  setTime = () => {} 
+} = examContext;
+
+const [activeAttemptId, setActiveAttemptId] = useState(null);
+const navigate = useNavigate();
+const { examId } = useParams();
+const hasStarted = useRef(false);
 
   // 1. SUBMIT EXAM
   const submitExam = useCallback(async () => {
@@ -28,31 +39,35 @@ export default function ExamPagePro() {
     }
   }, [answers, examId, navigate, activeAttemptId]);
 
-  // 2. LOAD EXAM
   useEffect(() => {
-    if (hasStarted.current || !examId) return;
-    hasStarted.current = true;
+  if (hasStarted.current || !examId) return;
+  hasStarted.current = true;
 
-    const startExam = async () => {
-      try {
-        // Start the attempt and capture the ID
-        const startRes = await api.post("/api/exam/start/", { exam_id: examId });
-        setActiveAttemptId(startRes.data.attempt_id);
-        
-        // Fetch exam content
-        const examRes = await api.get(`/api/exam/detail/${examId}/`);
+  const startExam = async () => {
+    try {
+      const startRes = await api.post("/api/exam/start/", { exam_id: examId });
+      setActiveAttemptId(startRes.data.attempt_id);
+      
+      const examRes = await api.get(`/api/exam/detail/${examId}/`);
+      
+      // Ensure we only set if data exists
+      if (examRes.data) {
         setExam(examRes.data); 
-      } catch (err) {
-        console.error("Error during startup:", err);
       }
-    };
+    } catch (err) {
+      console.error("Error during startup:", err);
+      hasStarted.current = false; // Reset so it can try again on error
+    }
+  };
 
-    startExam();
-  }, [examId, setExam]);
+  startExam();
+}, [examId, setExam]);
 
   // 3. TIMER
-  const finalMinutes = exam?.duration_minutes || (exam?.questions?.length * 0.6) || 30;
-  useTimer(finalMinutes * 60, setTime, submitExam);
+  const finalMinutes = exam?.duration_minutes ?? (exam?.questions?.length * 0.6) ?? 30;
+
+// Only hook the timer if exam is loaded to prevent errors
+useTimer(finalMinutes * 60, setTime, submitExam);
 
   // 4. HANDLERS
   const selectAnswer = (qId, optionId) => setAnswers(prev => ({ ...prev, [qId]: optionId }));
@@ -60,12 +75,14 @@ export default function ExamPagePro() {
 
   // 5. LOADING GUARD
   if (!exam || !exam.questions || exam.questions.length === 0) {
-    return (
-      <div className="d-flex justify-content-center align-items-center" style={{ height: '100vh', background: '#f8fafc' }}>
-        <div className="spinner-border text-primary" role="status"></div>
+  return (
+    <div className="d-flex justify-content-center align-items-center" style={{ height: '100vh', background: '#f8fafc' }}>
+      <div className="spinner-border text-primary" role="status">
+        <span className="visually-hidden">Loading...</span>
       </div>
-    );
-  }
+    </div>
+  );
+}
 
   return (
     <div className="container-fluid py-4" style={{ background: "#f8fafc", minHeight: "100vh" }}>
