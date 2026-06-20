@@ -10,6 +10,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 # --- 🔐 SECURITY DEFINITIONS FROM .env ---
+import os
+# print("DB_HOST:", os.getenv("DATABASE_URL")) # Check if this prints correctly
 SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-&)4xrk^s$u#o&p0$vopli#0do51jj-3_p!s94erfkep88&usib")
 DEBUG = os.environ.get("DEBUG", "False").lower() == "true"
 # Update ALLOWED_HOSTS

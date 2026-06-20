@@ -58,7 +58,7 @@ def create_exam(request):
         if not topic:
             return Response({"error": "Topic not found."}, status=status.HTTP_404_NOT_FOUND)
 
-        # 3. Check for existing unused snapshot
+        # 3. Check for existing unused snapshot (exclude empty/broken ones)
         if use_question_bank:
             snapshot = ExamSnapshot.objects.filter(
                 topic=topic,
@@ -66,10 +66,9 @@ def create_exam(request):
                 num_questions=num_questions,
                 difficulty=difficulty,
                 is_used=False
-            ).first()
+            ).exclude(questions_json=[]).first()
 
             if snapshot:
-                # Safely extract existing exam_id
                 existing_exam_id = None
                 if snapshot.questions_json and isinstance(snapshot.questions_json, list) and len(snapshot.questions_json) > 0:
                     existing_exam_id = snapshot.questions_json[0].get("exam_id")
@@ -83,33 +82,46 @@ def create_exam(request):
 
         # 4. Generate New Exam
         result = generate_exam(
-            topic, subtopic, num_questions, difficulty, 
+            topic, subtopic, num_questions, difficulty,
             timer_minutes=timer_minutes, use_question_bank=use_question_bank
         )
 
         if result.get("status") == "error":
             return Response({"error": result.get("message")}, status=status.HTTP_400_BAD_REQUEST)
 
-        # 5. Save Snapshot for reuse
-        if use_question_bank:
+        exam_id = result.get("exam_id")
+
+        # 5. Save Snapshot for reuse — build questions_json from the real saved questions
+        if use_question_bank and exam_id:
+            exam_obj = Exam.objects.prefetch_related("questions__options").get(id=exam_id)
+            questions_data = []
+            for q in exam_obj.questions.all():
+                correct_opt = next((opt.text for opt in q.options.all() if opt.is_correct), None)
+                questions_data.append({
+                    "exam_id": exam_id,
+                    "question": q.question_text,
+                    "explanation": q.explanation,
+                    "options": [opt.text for opt in q.options.all()],
+                    "answer": correct_opt,
+                })
+
             ExamSnapshot.objects.create(
                 topic=topic,
                 subtopic=subtopic,
                 num_questions=num_questions,
                 difficulty=difficulty,
-                questions_json=result.get("questions", [])
+                questions_json=questions_data
             )
 
         return Response({
             "status": "success",
-            "exam_id": result.get("exam_id"),
+            "exam_id": exam_id,
             "is_existing": False
         })
 
     except Exception:
-        # This will reveal the exact line causing the crash in Render Logs
         print("--- CRITICAL EXAM ERROR TRACEBACK ---")
-        traceback.print_exc() 
+        traceback.print_exc()
         return Response({"error": "Check server logs for traceback"}, status=500)
 @api_view(["POST"])
 @permission_classes([AllowAny])

@@ -34,6 +34,7 @@ IMPORTANT RULES:
 - No explanation text
 - No extra words
 - Questions must be English + Bangla mixed
+- but if subject is english then no need to mixed bangla (when subject is english then only english will return . question and option )
 
 FORMAT:
 
